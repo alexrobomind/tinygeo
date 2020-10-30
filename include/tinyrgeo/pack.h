@@ -1,106 +1,31 @@
-namespace tinyrtree {
+namespace tinyrgeo {
 	
-	// An indirection required to build and implement the treenode implementation below.
-	
-	template<typename T>
-	struct ShapeRef<T> {
-		using Point = typename T::Point;
-		using Target = T;
-		
-		std::shared_ptr<T> target;
-	};
-	
-	template<typename T>
-	struct implements<ShapeRef<T>, concepts::Shape<T::Point>> { static constexpr value = true; }
-	
-	template<typename T>
-	auto bounding_box(const ShapeRef<T>& in) { return bounding_box(*(in.target)); }
-	
-	/** An iterator for iterating over the targets referenced by shape ref lists*/
-	template<typename It>
-	struct ShapeRefListIterator {
-		using Self = ShapeRefListIterator<It>;
-		using Ref = It::value_type;
-		using Target = Ref::Target;
-		
-		using value_type = const Target;
-		using pointer = const Target*;
-		using reference = const Target&;
-		using iterator_category = std::input_iterator_tag;
-		using difference_type = It::difference_type;
-		
-		It target;
-		
-		ShapeRefListIterator(const It& t) : target(t) {}
-		
-		bool operator==(const Self& other) const { return target == other.target; }
-		bool operator!=(const Self& other) const { return target != other.target; }
-		bool operator*() const { return *(target -> target); }
-		
-		Self& operator++() { ++target; return *this; }
-		
-		const Target& operator*() { return *(target -> target); }
-	};
-	
-	// An implementation of the TreeNode concept
-	
+	// A simple implementation of the Node concept
 	template<typename T>
 	struct Node {
 		Box<point_for<T::Point>> box;
-		virtual ~Node() {}
 		
-	private:
-		Node() {};
-		
-		friend class LeafNode<T>;
-		friend class InteriorNode<T>;
-	};
-	
-	template<typename T>
-	struct LeafNode : public Node<T> {
 		std::vector<T> data;
-	};
-	
-	template<typename T>
-	struct InteriorNode : public Node<T> {
-		std::vector<ShapeRef<Node<T>>> children;
-	}
-	
-	template<typename Visitor, typename T>
-	Visitor::ReturnType visit(const Node<T>& node, Visitor& v) {
-		LeafNode<T>* leaf_ptr = std::dynamic_cast<const LeafNode<T>*>(&node);
-		if(leaf_ptr != std::nullptr) {
-			v.visit_leaf(leaf_ptr -> data.begin(), leaf_ptr -> data.end());
-			return;
-		}
+		std::vector<Node<T>> children;
 		
-		InteriorNode<T>& interior = std::dynamic_cast<const InteriorNode<T>&>(node); // This could in principle be static
-		using It = decltype(interior.children.begin());
-		ShapeRefListIterator<It> begin(interior.children.begin());
-		ShapeRefListIterator<It> end(interior.children.end());
-		v.visit_interior(begin, end);
-	}
-	
-	template<typename T>
-	const Box<point_for<T::Point>>& bounding_box(const Node<T>& node) { return node.box; }
+		const Box<point_for<T::Point>>& bounding_box() const { return box; }
+	};
 	
 	// A single level of the packing algorithm, always builds a vector of leaf nodes.
 	
 	template<typename T>
-	using PackResult<T> = std::vector<ShapeRef<LeafNode<T>>>;
+	using PackResult<T> = std::vector<Node<T>>;
 	
 	template<typename It1, typename It2>
 	PackResult<It1::value_type> pack_static(It1 begin, It2 end, size_t leaf_size) {
 		static_assert(std::is_same<It1::value_type, It2::value_type>)
 		
-		using T = It1::value_type;
-		static_assert(implements<T, Shape<T::Point>>::value);
-		
+		using T = It1::value_type;		
 		using P = T::Point;
 		static constexpr size_t dim = P::dimension;
 		
 		// Allocate storage for leaf data and points
-		using PairType = std::pair<const T&, point_for<T::Point>>;
+		using PairType = std::pair<T, point_for<T::Point>>;
 		std::vector<PairType> storage;
 		storage.reserve(std::distance(begin, end));
 		
@@ -175,68 +100,57 @@ namespace tinyrtree {
 			size_t start = last_stage[i];
 			size_t stop  = last_stage[i+1];
 			
-			auto node = std::make_shared<LeafNode<T>>();
-			result[i].target = node;
+			auto& node = result[i];
 			
-			node -> data.insert(result.begin(), storage.begin() + start, storage.begin() + stop);
+			node.data.insert(node.data.begin(), storage.begin() + start, storage.begin() + stop);
 			
 			// Bounding box computation
 			node.data.box = Box<P>::empty();
 			for(size_t i = 0; i < result[i]; ++i) {
-				node.box = combine_boxes(node.box)
+				node.box = combine_boxes(node.box, node.data[i].bounding_box())
 			}
 		}
 		
 		return result;		
 	}
-	
-	// Multi-level packing algorithm, that also erases the node types
-	
-	template<typename It1, typename It2>
-	ShapeRef<Node<It1::value_type>> pack(It1 it1, It2 it2) {
-		using T = It1::value_type;
-		using NodeList = PackTypeErasure<T>::NodeList;
 		
-		NodeList nodes = PackTypeErasure<T>::convert(pack_static(it1, it2));
-		while(nodes.size() != 1) {
-			nodes = PackTypeErasure<T>::convert(pack_static(nodes.begin(), nodes.end()));
-		}
-		
-		return nodes[0];
-	}
-	
 	/** pack_static only can construct leaf nodes. This class contains the method that pack the
 	 *  nodes holding the data into the correct target. If it is leaf nodes holding data, the target is
 	 *  unchanged. However, if the leaf nodes hold references to other nodes, they are converted into
 	 *  interior nodes. */
 	template<typename T>
-	struct PackTypeErasure {
-		using NodeList = std::vector<ShapeRef<Node<T>>>;
+	struct PackNesting {
+		using NodeList = std::vector<Node<T>>;
 		
 		/** Simple case: We packed a list of input data */
 		static NodeList convert(PackResult<T>&& in) {
-			NodeList out(in.size());
-			
-			for(size_t i = 0; i < in.size(); ++i)
-				out[i].target = std::static_pointer_cast<Node<T>>(in[i].target);
-			
-			return out;
+			return in;
 		}
 		
-		/** Complex case: We packed a list of nodes (or more specificially: ShapeRefs to node T). Here, we need to
+		/** Complex case: We packed a list of nodes. Here, we need to
 		 *  convert the returned leaf nodes into interior nodes.*/
-		static NodeList convert(PackResult<ShapeRef<Node<T>>>&& in) {
+		static NodeList convert(PackResult<Node<T>>&& in) {
 			NodeList out(in.size());
 			
 			for(size_t i = 0; i < in.size();++i) {
-				std::shared_ptr<InteriorNode<T>> wrapper = std::make_shared<InteriorNode<T>>();
-				wrapper.children = in[i].data;
-				wrapper.box = in[i].box;
-				
-				out[i].target = std::static_pointer_cast<Node<T>> wrapper;
+				out[i].children = std::move(in[i].data);
+				out[i].box = std::move(in[i].box);
 			}
 			
 			return out;
 		}
+	}
+	
+	template<typename It1, typename It2>
+	Node<It1::value_type> pack(It1 it1, It2 it2) {
+		using T = It1::value_type;
+		using NodeList = typename PackNesting<T>::NodeList;
+		
+		NodeList nodes = PackNesting<T>::convert(pack_static(it1, it2));
+		while(nodes.size() != 1) {
+			nodes = PackNesting<T>::convert(pack_static(nodes.begin(), nodes.end()));
+		}
+		
+		return nodes[0];
 	}
 }

@@ -1,7 +1,11 @@
-namespace tinyrtree {
+namespace tinyrgeo {
+	
+// Forward declaration for points
+template<size_t dim, typename T>
+struct Point;
 	
 template<typename T>
-using point_for = Point<PointInfo<T>::dimension, PointInfo<T>::numeric_type>;
+using point_for = Point<T::dimension, typename T::numeric_type>;
 
 template<typename T...>
 auto p_min(const T& t...) {
@@ -18,7 +22,7 @@ point_for<P1> half_point(const P1& p1, const P2& p2) {
 	num = P1::numeric_type;
 	
 	auto l = [](num n1, num n2) { return 0.5 * (n1 + n2); }
-	return p_elmap(l, p1, p2);
+	return internal::p_elmap(l, p1, p2);
 }
 
 namespace internal {
@@ -31,7 +35,7 @@ namespace internal {
 			
 			point_for<P> result;
 			for(size_t i = 0; i < dim; ++i)
-				result[i] = f(p.get(i), rem.get(i)...);
+				result[i] = f(p[i], rem[i]...);
 			
 			return result;
 		};
@@ -47,7 +51,7 @@ namespace internal {
 template<typename T>
 void assign(point_for<T>& dst, const T& src) {
 	for(size_t i = 0; i < T::dimension; ++i)
-		dst.get(i) = src.get(i)
+		dst[i] = src[i];
 }
 
 }
