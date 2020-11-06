@@ -1,12 +1,16 @@
+#pragma once
+
+#include <tinyrgeo/concepts.h>
+
 namespace tinyrgeo {
 
 template<typename T>
-static Box<point_for<T::Point>> triangle_bounding_box(const T& tri) {
-	using P = point_for<T::Point>;
+static Box<point_for<typename T::Point>> triangle_bounding_box(const T& tri) {
+	using P = point_for<typename T::Point>;
 	
-	const P p0 = tri.get<0>();
-	const P p1 = tri.get<1>();
-	const P p2 = tri.get<2>();
+	const P p0 = tri.template get<0>();
+	const P p1 = tri.template get<1>();
+	const P p2 = tri.template get<2>();
 	
 	return Box<P>(
 		p_min(p0, p1, p2),
@@ -17,7 +21,6 @@ static Box<point_for<T::Point>> triangle_bounding_box(const T& tri) {
 template<typename P>
 struct Triangle {
 	using Point = point_for<P>;
-	static_assert(implements<P, Point<P::dimension, P::numeric_type>>::value);
 	
 	P points[3];
 	
@@ -30,7 +33,9 @@ struct Triangle {
 	auto bounding_box() const { return triangle_bounding_box(*this); }
 };
 
-template<typename P>
-struct implements<Triangle<P>, tags::triangle> { static constexpr value = true; }
+namespace concepts {
+	template<typename P>
+	struct implements<Triangle<P>, tags::triangle> { static constexpr bool value = true; };
+}
 
 }

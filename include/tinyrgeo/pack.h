@@ -1,47 +1,60 @@
+#pragma once
+
+#include <vector>
+#include <utility>
+#include <algorithm>
+
+#include <tinyrgeo/point.h>
+#include <tinyrgeo/box.h>
+
 namespace tinyrgeo {
 	
-	// A simple implementation of the Node concept
+	// A simple placeholder node
 	template<typename T>
-	struct Node {
-		Box<point_for<T::Point>> box;
+	struct PackNode {
+		using Point = typename T::Point;
+		
+		Box<point_for<typename T::Point>> box;
 		
 		std::vector<T> data;
-		std::vector<Node<T>> children;
+		std::vector<PackNode<T>> children;
 		
-		const Box<point_for<T::Point>>& bounding_box() const { return box; }
+		const Box<point_for<typename T::Point>>& bounding_box() const { return box; }
 	};
 	
-	// A single level of the packing algorithm, always builds a vector of leaf nodes.
+	// A single level of the packing algorithm.
 	
 	template<typename T>
-	using PackResult<T> = std::vector<Node<T>>;
+	using PackResult = std::vector<PackNode<T>>;
 	
 	template<typename It1, typename It2>
-	PackResult<It1::value_type> pack_static(It1 begin, It2 end, size_t leaf_size) {
-		static_assert(std::is_same<It1::value_type, It2::value_type>)
+	PackResult<typename It1::value_type> pack_static(It1 begin, It2 end, size_t leaf_size) {
+		//static_assert(std::is_same<typename It1::value_type, typename It2::value_type>::value);
 		
-		using T = It1::value_type;		
-		using P = T::Point;
+		using T = typename It1::value_type;		
+		using P = typename T::Point;
 		static constexpr size_t dim = P::dimension;
 		
-		// Allocate storage for leaf data and points
-		using PairType = std::pair<T, point_for<T::Point>>;
+		// Allocate storage for leaf data and center points
+		using PairType = std::pair<T, point_for<typename T::Point>>;
 		std::vector<PairType> storage;
 		storage.reserve(std::distance(begin, end));
 		
-		// Reference inputs and cache bounding box center in storage
-		auto transformer = [](const T& in) {
-			return PairType(in, center(bounding_box(in)));
-		};
-		std::transform(begin, end, std::back_inserter(storage), transformer);
+		// Copy inputs and cache bounding box center
+		{
+			auto transformer = [](const T& in) {
+				return PairType(in, center(in.bounding_box()));
+			};
+			std::transform(begin, end, std::back_inserter(storage), transformer);
+		}
 		
-		double dfactor = pow(((double) storage.size()) / leaf_size, 1.0d / dim);
+		double dfactor = pow(((double) storage.size()) / leaf_size, 1.0 / dim);
 		size_t factor = (size_t) dfactor;
 		
 		if(factor == 0) factor = 1;
 		
 		// Pre-compute sub-division strategy
-		std::vector<std::vector<size_t>> indices(dim);
+		std::vector<std::vector<size_t>> indices(dim + 1);
 		
 		// Strategy for first dimension is trivial
 		indices[0].resize(2);
@@ -49,17 +62,23 @@ namespace tinyrgeo {
 		indices[0][1] = storage.size();
 		
 		// Compute subdivision strategy recursively
-		for(size_t i_dim = 1; i_dim < dim; ++i_dim) {
+		for(size_t i_dim = 1; i_dim <= dim; ++i_dim) {
+			pybind11::print("Computing strategy for dimension " + std::to_string(i_dim));
+			
 			const std::vector<size_t>& in = indices[i_dim - 1];
 			std::vector<size_t>& out = indices[i_dim];
 			
 			out.resize(1 + factor * (in.size() - 1));
 			out[out.size() - 1] = storage.size();
 			
+			pybind11::print("\tCreated " + std::to_string(out.size() - 1) + " sub-ranges");
+			
 			for(size_t i = 0; i < in.size() - 1; ++i) {
 				// Let's subdivide the range specified between in[i] and in[i+1] into factor subranges
 				size_t in_start = in[i];
 				size_t in_end   = in[i+1];
+				
+				pybind11::print("\t\tProcessing range [" + std::to_string(in_start) + ", " + std::to_string(in_end) + "[");
 				
 				size_t in_count = in_end - in_start;
 				
@@ -70,6 +89,8 @@ namespace tinyrgeo {
 				// Distribute the elements to subranges
 				size_t base = in_start;
 				for(size_t j = 0; j < factor; ++j) {
+					pybind11::print("\t\t\t" + std::to_string(factor * i + j) + " <- " + std::to_string(base));
+					
 					out[factor * i + j] = base;
 					base += j < remain ? in_all + 1 : in_all;
 				}
@@ -81,7 +102,7 @@ namespace tinyrgeo {
 			const std::vector<size_t>& idx = indices[i_dim];
 			
 			auto comparator = [i_dim](const PairType& p1, const PairType& p2) {
-				return p1.second.get(i_dim) < p2.second.get(i_dim);
+				return p1.second[i_dim] < p2.second[i_dim];
 			};
 			
 			for(size_t i_el = 0; i_el < idx.size() - 1; ++i_el) {
@@ -92,7 +113,7 @@ namespace tinyrgeo {
 			}
 		}
 		
-		const std::vector<size_t>& last_stage = indices[dim - 1];
+		const std::vector<size_t>& last_stage = indices[dim];
 		const size_t n_nodes = last_stage.size() - 1;
 		
 		PackResult<T> result(n_nodes);
@@ -102,13 +123,20 @@ namespace tinyrgeo {
 			
 			auto& node = result[i];
 			
-			node.data.insert(node.data.begin(), storage.begin() + start, storage.begin() + stop);
+			// Copy the data into the target node
+			{
+				auto transformer = [&](const PairType& in) {
+					return in.first;
+				};
+				std::transform(storage.begin() + start, storage.begin() + stop, std::back_inserter(node.data), transformer);
+			}
 			
 			// Bounding box computation
-			node.data.box = Box<P>::empty();
-			for(size_t i = 0; i < result[i]; ++i) {
-				node.box = combine_boxes(node.box, node.data[i].bounding_box())
+			auto box = Box<P>::empty();
+			for(size_t j = start; j < stop; ++j) {
+				box = combine_boxes(box, storage[j].first.bounding_box());
 			}
+			node.box = box;
 		}
 		
 		return result;		
@@ -120,7 +148,7 @@ namespace tinyrgeo {
 	 *  interior nodes. */
 	template<typename T>
 	struct PackNesting {
-		using NodeList = std::vector<Node<T>>;
+		using NodeList = std::vector<PackNode<T>>;
 		
 		/** Simple case: We packed a list of input data */
 		static NodeList convert(PackResult<T>&& in) {
@@ -129,7 +157,7 @@ namespace tinyrgeo {
 		
 		/** Complex case: We packed a list of nodes. Here, we need to
 		 *  convert the returned leaf nodes into interior nodes.*/
-		static NodeList convert(PackResult<Node<T>>&& in) {
+		static NodeList convert(PackResult<PackNode<T>>&& in) {
 			NodeList out(in.size());
 			
 			for(size_t i = 0; i < in.size();++i) {
@@ -139,16 +167,16 @@ namespace tinyrgeo {
 			
 			return out;
 		}
-	}
+	};
 	
 	template<typename It1, typename It2>
-	Node<It1::value_type> pack(It1 it1, It2 it2) {
-		using T = It1::value_type;
+	PackNode<typename It1::value_type> pack(It1 it1, It2 it2, size_t size) {
+		using T = typename It1::value_type;
 		using NodeList = typename PackNesting<T>::NodeList;
 		
-		NodeList nodes = PackNesting<T>::convert(pack_static(it1, it2));
+		NodeList nodes = PackNesting<T>::convert(pack_static(it1, it2, size));
 		while(nodes.size() != 1) {
-			nodes = PackNesting<T>::convert(pack_static(nodes.begin(), nodes.end()));
+			nodes = PackNesting<T>::convert(pack_static(nodes.begin(), nodes.end(), size));
 		}
 		
 		return nodes[0];
