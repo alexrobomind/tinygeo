@@ -2,10 +2,10 @@
 
 #include <list>
 
-#include <tinyrgeo/pack.h>
-#include <tinyrgeo/triangle.h>
+#include <tinygeo/pack.h>
+#include <tinygeo/triangle.h>
 
-namespace tinyrgeo {
+namespace tinygeo {
 
 // A triangle mesh that stores its data inside a vertex and index buffer
 template<size_t dim, typename PointBuffer, typename IndexBuffer>
@@ -135,8 +135,8 @@ struct IndexedTriangleMesh : public TriangleMesh<dim, PointBuffer, IndexBuffer> 
 		// Pack up the data contained in this node
 		Node r = root();
 		
-		using PackNode = tinyrgeo::PackNode<Accessor>;
-		PackNode pack_result = tinyrgeo::pack(this -> begin(), this -> end(), size);
+		using PackNode = tinygeo::PackNode<Accessor>;
+		PackNode pack_result = tinygeo::pack(this -> begin(), this -> end(), size);
 		
 		// Allocate new index buffer
 		IndexBuffer new_buffer(this -> index_buffer.shape(0), 3);

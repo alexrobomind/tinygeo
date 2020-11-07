@@ -1,6 +1,6 @@
 function(add_capnp_cpp target name)
-	set(INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/capnp_${name}_includes)
-	set(CAPNP_TARGET capnp_${name}_compilation)
+	set(INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/capnp_${target}_includes)
+	set(CAPNP_TARGET capnp_${target}_compilation)
 	
 	add_custom_command(
 		COMMAND $<TARGET_FILE:CapnProto::capnp_tool> compile -o$<TARGET_FILE:CapnProto::capnpc_cpp> --src-prefix ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/${name}
@@ -21,10 +21,11 @@ function(add_capnp_cpp target name)
 	target_link_libraries(${target} CapnProto::capnp)
 endfunction()
 
-add_capnp_cpp(rtree_geo rtree_geo.capnp)
+add_capnp_cpp(tinygeo_capnp tinygeo.capnp)
 
-pybind11_add_module(tinyrgeo python.cpp)
-target_link_libraries(tinyrgeo PRIVATE headers Eigen3::Eigen rtree_geo)
+pybind11_add_module(tinygeo python.cpp)
+#target_link_libraries(tinygeo PRIVATE headers Eigen3::Eigen tinygeo_capnp)
+target_link_libraries(tinygeo PRIVATE headers Eigen3::Eigen)
 
-install(TARGETS tinyrgeo EXPORT tinyrgeo_exports LIBRARY DESTINATION lib)
-install(TARGETS rtree_geo EXPORT tinyrgeo_exports)
+install(TARGETS tinygeo EXPORT tinygeo_exports LIBRARY DESTINATION lib)
+install(TARGETS tinygeo_capnp EXPORT tinygeo_exports)

@@ -1,10 +1,10 @@
 #pragma once
 
-#include <tinyrgeo/concepts.h>
-#include <tinyrgeo/buffer.h>
+#include <tinygeo/concepts.h>
+#include <tinygeo/buffer.h>
 #include <Eigen/Dense>
 
-namespace tinyrgeo {
+namespace tinygeo {
 	
 template<typename T>
 struct same_type { using type = T; };
@@ -22,28 +22,61 @@ std::enable_if_t<N::tag == tags::node, typename N::Point::numeric_type> ray_trac
 	using Num = typename N::Point::numeric_type;
 	using PairType = std::pair<Num, size_t>;
 	
+	//pybind11::print("Casting ray through node");
+	//pybind11::print("  with " + std::to_string(node.n_data()) + " triangles");
+	//pybind11::print("  with " + std::to_string(node.n_children()) + " children");
+	
 	// Intersect with stored triangles
 	Num result = std::numeric_limits<Num>::infinity();
-	for(size_t i = 0; i < node.n_data(); ++i) {
-		Num it_result = ray_trace(start, end, node.data(i), l_max);
-		result = std::min(result, it_result);
-	}
-	
-	// Compute lower bound on distance based on bounding box intersections
-	std::vector<PairType> data;
-	for(size_t i = 0; i < node.n_children(); ++i)
-		data.push_back(std::make_pair(ray_trace(start, end, node.child(i).bounding_box(), l_max), i));
-	
-	std::sort(data.begin(), data.end());
-	
-	for(size_t i = 0; i < node.n_children(); ++i) {
-		if(data[i].first < std::min(result, l_max)) {
-			Num it_result = ray_trace(start, end, node.child(data[i].second), l_max);
-			result = std::min(result, it_result);
-		} else {
-			return result;
+	{
+		std::vector<PairType> data;
+		data.reserve(node.n_data());
+		for(size_t i = 0; i < node.n_data(); ++i)
+			data.push_back(std::make_pair(ray_trace(start, end, node.data(i).bounding_box(), l_max), i));
+		
+		std::sort(data.begin(), data.end());
+		
+		for(size_t i = 0; i < data.size(); ++i) {
+			if(data[i].first < std::min(result, l_max)) {
+				Num it_result = ray_trace(start, end, node.data(data[i].second), l_max);
+				result = std::min(result, it_result);
+			} else {
+				continue;
+			}
 		}
 	}
+	
+	//pybind11::print("  after children, result is " + std::to_string(result));
+	
+	// Compute lower bound on distance based on bounding box intersections
+	{
+		std::vector<PairType> data;
+		data.reserve(node.n_children());
+		for(size_t i = 0; i < node.n_children(); ++i)
+			data.push_back(std::make_pair(ray_trace(start, end, node.child(i).bounding_box(), l_max), i));
+		
+		std::sort(data.begin(), data.end());
+		
+		for(size_t i = 0; i < node.n_children(); ++i) {
+			//pybind11::print("  Intersection with bounding box " + std::to_string(data[i].second) + ": " + std::to_string(data[i].first));
+			
+			if(data[i].first < std::min(result, l_max)) {
+				//pybind11::print("  Promising. Proceeding with child");
+				Num it_result = ray_trace(start, end, node.child(data[i].second), l_max);
+				//pybind11::print("  Child returned " + std::to_string(it_result));
+				result = std::min(result, it_result);
+				//pybind11::print("  New threshold: " + std::to_string(result));
+			} else {
+				//pybind11::print("  Limit exceeded. Returning " + std::to_string(result));
+				//pybind11::print("  Limit exceeded. Trying anyway");
+				//Num it_result = ray_trace(start, end, node.child(data[i].second), l_max);
+				//pybind11::print("  Child returned " + std::to_string(it_result));
+				continue;
+			}
+		}
+	}
+	
+	//pybind11::print("  All boxed processed. Returning " + std::to_string(result));
 	
 	return result;
 }

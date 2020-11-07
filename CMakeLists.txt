@@ -2,19 +2,19 @@ cmake_minimum_required(VERSION 3.18)
 
 include(ExternalProject)
 
-project(tinyrgeo)
+project(tinygeo)
 
 # =================================== DEPENDENCY SETUP ======================================
 
-set(TINYRGEO_ALLOW_BUNDLED ON CACHE BOOL "Whether bundled libraries are allowed (overrides individual settings)")
-set(TINYRGEO_FORCE_BUNDLED OFF CACHE BOOL "Whether bundled libraries must be used")
+set(TINYGEO_ALLOW_BUNDLED ON CACHE BOOL "Whether bundled libraries are allowed (overrides individual settings)")
+set(TINYGEO_FORCE_BUNDLED OFF CACHE BOOL "Whether bundled libraries must be used")
 
 # Helper function to manage the optional bundled dependency setup
 function(setup_dependency CNAME LONGNAME)
-	set(TINYRGEO_ALLOW_BUNDLED_${CNAME} ON CACHE BOOL "Whether the bundled ${LONGNAME} may be used")
-	set(TINYRGEO_FORCE_BUNDLED_${CNAME} OFF CACHE BOOL "Whether the bundled ${LONGNAME} library must be used")
+	set(TINYGEO_ALLOW_BUNDLED_${CNAME} ON CACHE BOOL "Whether the bundled ${LONGNAME} may be used")
+	set(TINYGEO_FORCE_BUNDLED_${CNAME} OFF CACHE BOOL "Whether the bundled ${LONGNAME} library must be used")
 	
-	if(NOT TINYRGEO_FORCE_BUNDLED_${CNAME} AND NOT TINYRGEO_FURCE_BUNDLED)
+	if(NOT TINYGEO_FORCE_BUNDLED_${CNAME} AND NOT TINYGEO_FURCE_BUNDLED)
 		find_package(${CNAME} QUIET)
 	else()
 		set(${CNAME}_FOUND ${CNAME}_NOTFOUND)
@@ -23,7 +23,7 @@ function(setup_dependency CNAME LONGNAME)
 	if(${CNAME}_FOUND)
 		set(${CNAME}_MSG "External: ${${CNAME}_DIR}" PARENT_SCOPE)
 	else()
-		if(NOT TINYRGEO_ALLOW_BUNDLED_${CNAME} OR NOT TINYRGEO_ALLOW_BUNDLED)
+		if(NOT TINYGEO_ALLOW_BUNDLED_${CNAME} OR NOT TINYGEO_ALLOW_BUNDLED)
 			message(FATAL_ERROR "Bundled ${LONGNAME} is disabled, but no '${CNAME}' module could be found")
 		endif()
 	
@@ -68,12 +68,12 @@ setup_dependency(Eigen3 Eigen)
 add_library(headers INTERFACE)
 target_include_directories(headers INTERFACE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include> $<INSTALL_INTERFACE:${CMAKE_INSTALL_PREFIX}/include>)
 
-install(TARGETS headers EXPORT tinyrgeo_exports)
-install(DIRECTORY include/tinyrgeo DESTINATION include)
+install(TARGETS headers EXPORT tinygeo_exports)
+install(DIRECTORY include/tinygeo DESTINATION include)
 
 add_subdirectory(src)
 
-install(EXPORT tinyrgeo_exports DESTINATION lib/cmake NAMESPACE "tinyrgeo::")
+install(EXPORT tinygeo_exports DESTINATION lib/cmake NAMESPACE "tinygeo::")
 
 # =============================== SETUP INFO ===============================================
 

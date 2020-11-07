@@ -1,8 +1,8 @@
 #pragma once
 
-#include <tinyrgeo/concepts.h>
+#include <tinygeo/concepts.h>
 
-namespace tinyrgeo {
+namespace tinygeo {
 
 template<typename T>
 static Box<point_for<typename T::Point>> triangle_bounding_box(const T& tri) {

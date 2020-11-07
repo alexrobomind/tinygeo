@@ -1,9 +1,9 @@
 #pragma once
 
-#include <tinyrgeo/concepts.h>
-#include <tinyrgeo/point.h>
+#include <tinygeo/concepts.h>
+#include <tinygeo/point.h>
 
-namespace tinyrgeo {
+namespace tinygeo {
 
 template<typename P>
 struct Box {
@@ -42,7 +42,7 @@ private:
 
 namespace concepts {
 	template<typename P>
-	struct implements<::tinyrgeo::Box<P>, tags::box> { static constexpr bool value = true; };
+	struct implements<::tinygeo::Box<P>, tags::box> { static constexpr bool value = true; };
 }
 
 template<typename B1, typename... Rem>

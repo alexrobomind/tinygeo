@@ -4,10 +4,20 @@
 #include <utility>
 #include <algorithm>
 
-#include <tinyrgeo/point.h>
-#include <tinyrgeo/box.h>
+#include <tinygeo/point.h>
+#include <tinygeo/box.h>
 
-namespace tinyrgeo {
+#if 0
+	template<typename T>
+	void packprint(const T& t) {
+		py::print(t);
+	}
+#else
+	template<typename T>
+	void packprint(const T& t) {}
+#endif
+
+namespace tinygeo {
 	
 	// A simple placeholder node
 	template<typename T>
@@ -48,6 +58,10 @@ namespace tinyrgeo {
 			std::transform(begin, end, std::back_inserter(storage), transformer);
 		}
 		
+		std::vector<size_t> indirections(storage.size());
+		for(size_t i = 0; i < storage.size(); ++i)
+			indirections[i] = i;
+		
 		double dfactor = pow(((double) storage.size()) / leaf_size, 1.0 / dim);
 		size_t factor = (size_t) dfactor;
 		
@@ -63,7 +77,7 @@ namespace tinyrgeo {
 		
 		// Compute subdivision strategy recursively
 		for(size_t i_dim = 1; i_dim <= dim; ++i_dim) {
-			pybind11::print("Computing strategy for dimension " + std::to_string(i_dim));
+			packprint("Computing strategy for dimension " + std::to_string(i_dim));
 			
 			const std::vector<size_t>& in = indices[i_dim - 1];
 			std::vector<size_t>& out = indices[i_dim];
@@ -71,14 +85,14 @@ namespace tinyrgeo {
 			out.resize(1 + factor * (in.size() - 1));
 			out[out.size() - 1] = storage.size();
 			
-			pybind11::print("\tCreated " + std::to_string(out.size() - 1) + " sub-ranges");
+			packprint("\tCreated " + std::to_string(out.size() - 1) + " sub-ranges");
 			
 			for(size_t i = 0; i < in.size() - 1; ++i) {
 				// Let's subdivide the range specified between in[i] and in[i+1] into factor subranges
 				size_t in_start = in[i];
 				size_t in_end   = in[i+1];
 				
-				pybind11::print("\t\tProcessing range [" + std::to_string(in_start) + ", " + std::to_string(in_end) + "[");
+				packprint("\t\tProcessing range [" + std::to_string(in_start) + ", " + std::to_string(in_end) + "[");
 				
 				size_t in_count = in_end - in_start;
 				
@@ -89,7 +103,7 @@ namespace tinyrgeo {
 				// Distribute the elements to subranges
 				size_t base = in_start;
 				for(size_t j = 0; j < factor; ++j) {
-					pybind11::print("\t\t\t" + std::to_string(factor * i + j) + " <- " + std::to_string(base));
+					packprint("\t\t\t" + std::to_string(factor * i + j) + " <- " + std::to_string(base));
 					
 					out[factor * i + j] = base;
 					base += j < remain ? in_all + 1 : in_all;
@@ -99,15 +113,18 @@ namespace tinyrgeo {
 		
 		// Execute sorting strategy
 		for(size_t i_dim = 0; i_dim < dim; ++i_dim) {
+			packprint("Sorting dimension " + std::to_string(i_dim));
 			const std::vector<size_t>& idx = indices[i_dim];
 			
-			auto comparator = [i_dim](const PairType& p1, const PairType& p2) {
+			auto comparator = [i_dim, &storage](size_t i1, size_t i2) {
+				const PairType& p1 = storage[i1];
+				const PairType& p2 = storage[i2];
 				return p1.second[i_dim] < p2.second[i_dim];
 			};
 			
 			for(size_t i_el = 0; i_el < idx.size() - 1; ++i_el) {
-				auto it1 = storage.begin() + idx[i_el];
-				auto it2 = storage.begin() + idx[i_el + 1];
+				auto it1 = indirections.begin() + idx[i_el];
+				auto it2 = indirections.begin() + idx[i_el + 1];
 				
 				std::sort(it1, it2, comparator);
 			}
@@ -117,6 +134,7 @@ namespace tinyrgeo {
 		const size_t n_nodes = last_stage.size() - 1;
 		
 		PackResult<T> result(n_nodes);
+		packprint("Copying output");
 		for(size_t i = 0; i < n_nodes; ++i) {
 			size_t start = last_stage[i];
 			size_t stop  = last_stage[i+1];
@@ -125,16 +143,18 @@ namespace tinyrgeo {
 			
 			// Copy the data into the target node
 			{
-				auto transformer = [&](const PairType& in) {
+				node.data.reserve(stop - start);
+				auto transformer = [&](size_t i) {
+					const PairType& in = storage[i];
 					return in.first;
 				};
-				std::transform(storage.begin() + start, storage.begin() + stop, std::back_inserter(node.data), transformer);
+				std::transform(indirections.begin() + start, indirections.begin() + stop, std::back_inserter(node.data), transformer);
 			}
 			
 			// Bounding box computation
 			auto box = Box<P>::empty();
 			for(size_t j = start; j < stop; ++j) {
-				box = combine_boxes(box, storage[j].first.bounding_box());
+				box = combine_boxes(box, storage[indirections[j]].first.bounding_box());
 			}
 			node.box = box;
 		}

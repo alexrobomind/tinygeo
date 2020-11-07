@@ -1,8 +1,8 @@
 #pragma once
 
-#include <tinyrgeo/concepts.h>
+#include <tinygeo/concepts.h>
 
-namespace tinyrgeo {
+namespace tinygeo {
 
 template<size_t dim, typename T>
 struct Point {

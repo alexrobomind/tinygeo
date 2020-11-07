@@ -2,11 +2,11 @@
 #include <pybind11/numpy.h>
 #include <pybind11/stl.h>
 
-#include <tinyrgeo/buffer.h>
-#include <tinyrgeo/raytrace.h>
+#include <tinygeo/buffer.h>
+#include <tinygeo/raytrace.h>
 
 namespace py = pybind11;
-namespace tr = tinyrgeo;
+namespace tr = tinygeo;
 
 // === Python-compatible triangle mesh types ===
 
@@ -144,7 +144,7 @@ std::enable_if_t<Mesh::Point::dimension == 3> register_ray_cast(py::class_<Mesh,
 			pp2[i] = *p2.data(i);
 		}*/
 		
-		tr::ray_trace<typename Mesh::Node>(p1, p2, m.root(), l_max);
+		return tr::ray_trace<typename Mesh::Node>(p1, p2, m.root(), l_max);
 	}));
 }
 
@@ -201,7 +201,7 @@ void register_dimnum(std::string name, py::module_& m) {
 	register_trimesh<dim, Num, std::uint32_t>("ArrayMesh" + name, m);
 }
 
-PYBIND11_MODULE(tinyrgeo, m) {
+PYBIND11_MODULE(tinygeo, m) {
 	py::class_<PyArrayTriangleMeshBase>(m, "ArrayMesh")
 		.def_property_readonly("data", &PyArrayTriangleMeshBase::get_data)
 		.def_property_readonly("indices", &PyArrayTriangleMeshBase::get_idx)

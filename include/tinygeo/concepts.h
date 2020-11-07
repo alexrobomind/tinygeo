@@ -1,6 +1,6 @@
 #pragma once
 
-namespace tinyrgeo {
+namespace tinygeo {
 
 namespace tags {
 	enum tag {
