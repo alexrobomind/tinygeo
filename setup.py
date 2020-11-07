@@ -8,12 +8,12 @@ import setuptools as st
 import setuptools.command.build_ext as be
 
 
-class CMakeExtension(st.Extension):
-    def __init__(self, name):
-        super().__init__(name, sources=[])
+#class CMakeExtension(st.Extension):
+    #def __init__(self, name):
+    #    super().__init__(name, sources=[])
 
 
-class build_ext(be.build_ext):
+class cmake_build_ext(be.build_ext):
     def run(self):
         for ext in self.extensions:
             self.build_cmake(ext)
@@ -69,12 +69,17 @@ class build_ext(be.build_ext):
 
         os.chdir(str(cwd))
 
+wd = pathlib.Path()
+
+tinygeo_sources = list(wd.glob("include/**/*")) + list(wd.glob("src/**/*")) + list(wd.glob("external/**/*")) + ["CMakeLists.txt"]
+tinygeo_sources = [str(x) for x in tinygeo_sources]
 
 st.setup(
     name="tinygeo",
     version="0.1",
-    ext_modules=[CMakeExtension("tinygeo")],
+	author="Alexander Knieps",
+    ext_modules=[st.Extension("tinygeo", sources = tinygeo_sources)],
     cmdclass={
-        "build_ext": build_ext,
+        "build_ext": cmake_build_ext,
     },
 )
