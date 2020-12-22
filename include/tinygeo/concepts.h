@@ -6,7 +6,8 @@ namespace tags {
 	enum tag {
 		box,
 		triangle,
-		node
+		node,
+		grid
 	};
 }
 	
@@ -77,6 +78,18 @@ struct Buffer {
 	
 	const T& operator()(size_t i, size_t j) const { throw std::exception("Not implemented"); }
 	void set(size_t i, size_t j, const T& val) { throw std::exception("Not implemented"); }
+};
+
+template<typename T>
+struct Grid {
+	static constexpr tags::tag tag = tags::grid;
+	
+	using Point = typename T::Point;
+	
+	using MultiIndex = std::array<typename Point::numeric_type, Point::dimension>;
+	
+	MultiIndex index_for(const Point& p) { throw std::exception("Not implemented"); }
+	std::vector<T> query(MultiIndex i1, MultiIndex i2) { throw std::exception("Not implemented"); }
 };
 
 }}

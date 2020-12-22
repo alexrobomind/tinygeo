@@ -11,16 +11,26 @@ struct Point {
 	
 	T x[dim];
 	
-	/*Point() {
-		for(size_t i = 0; i < dim; ++i)
-			x[i] = 0;
-	}*/
 	Point() = default;
 	
 	template<typename P>
 	Point(const P& other) {
 		for(size_t i = 0; i < dim; ++i)
 			x[i] = other[i];
+	}
+	
+	Point(const std::array<T, dim>& input) {
+		for(size_t i = 0; i < dim; ++i)
+			x[i] = input[i];
+	}
+	
+	Point(const std::initializer_list<T>& input) :
+		Point(std::array<T, dim>(input))
+	{}
+	
+	Point(const std::valarray<T>& input) {
+		for(size_t i = 0; i < dim; ++i)
+			x[i] = input[i];
 	}
 	
 	const T& operator[](size_t i) const { return x[i]; }

@@ -8,6 +8,7 @@ namespace tinygeo {
 template<typename P>
 struct Box {
 	constexpr static tags::tag tag = tags::box;
+	using tag_type = size_t;
 	
 	using Point = P;
 	

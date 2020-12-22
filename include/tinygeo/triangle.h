@@ -21,6 +21,8 @@ static Box<point_for<typename T::Point>> triangle_bounding_box(const T& tri) {
 template<typename P>
 struct Triangle {
 	using Point = point_for<P>;
+	static constexpr tags::tag tag = tags::triangle;
+	using tag_type = size_t;
 	
 	P points[3];
 	
@@ -31,6 +33,7 @@ struct Triangle {
 	P& get()       { return points[i]; }
 		  
 	auto bounding_box() const { return triangle_bounding_box(*this); }
+	std::vector<tag_type> tags() { return std::vector<tag_type>(); }
 };
 
 namespace concepts {
