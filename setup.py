@@ -76,7 +76,7 @@ tinygeo_sources = [str(x) for x in tinygeo_sources]
 
 st.setup(
     name="tinygeo",
-    version="0.1",
+    version="0.2",
 	author="Alexander Knieps",
     ext_modules=[st.Extension("tinygeo", sources = tinygeo_sources)],
     cmdclass={
