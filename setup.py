@@ -86,7 +86,7 @@ tinygeo_sources = [str(x) for x in tinygeo_sources]
 
 st.setup(
     name="tinygeo",
-    version="0.2",
+    version="0.3",
 	author="Alexander Knieps",
     ext_modules=[st.Extension("tinygeo", sources = tinygeo_sources)],
     install_requires = ['numpy'],
