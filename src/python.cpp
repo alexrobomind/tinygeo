@@ -7,7 +7,13 @@
 #include <tinygeo/capnp.h>
 
 // POSIX-style file-handling
+#if _WIN32
 #include <kj/miniposix.h>
+#else
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#endif
 
 #include <capnp/serialize.h>
 
@@ -111,7 +117,7 @@ struct PyArrayTriangleMesh :
 		// Thanks Microsoft for inventing your "own" API -.-
 		const int fd = _open(fname.c_str(), _O_CREAT | _O_TRUNC |_O_BINARY | _O_RDWR, _S_IWRITE);
 		#else
-		const int fd = open(fname.c_str(), O_CREAT | O_TRUNC | O_BINARY | O_RDWR);
+		const int fd = open(fname.c_str(), O_CREAT | O_TRUNC | O_RDWR, S_IRUSR | S_IWUSR | S_IRGRP);
 		#endif
 		
 		capnp::writeMessageToFd(fd, builder);

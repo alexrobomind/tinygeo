@@ -34,18 +34,34 @@ class cmake_build_ext(be.build_ext):
 
         # example of cmake args
         config = "Debug" if self.debug else "Release"
-        arch = "x64" if platform.architecture()[0] == "64bit" else "x86"
+
+        cmake_args = [
+            "-DCMAKE_BUILD_TYPE=" + config,
+            "-DPYTHON_EXECUTABLE=" + sys.executable,
+        ]
+
+        build_args = [
+            "--target",
+            ext.name,
+            "--config",
+            config,
+            "-j",
+            "4",
+        ]
+
+        # The Win32 generator by default compiles 32bit executables
+        # This makes it incompatible with 64bit python
+        # Therefore, we have to override its settings here
+        if sys.platform == "win32":
+            vs_platform = "x64" if platform.architecture()[0] == "64bit" else "x86"
+            cmake_args += ["-A", vs_platform]
 
         os.chdir(str(build_temp))
         self.spawn(
             [
                 "cmake",
                 str(cwd),
-                "-DCMAKE_BUILD_TYPE=" + config,
-                "-DPYTHON_EXECUTABLE=" + sys.executable,
-                "-A",
-                arch,
-            ]
+            ] + cmake_args
         )
 
         if not self.dry_run:
@@ -54,13 +70,7 @@ class cmake_build_ext(be.build_ext):
                     "cmake",
                     "--build",
                     ".",
-                    "--target",
-                    ext.name,
-                    "--config",
-                    config,
-                    "-j",
-                    "4",
-                ]
+                ] + build_args
             )
 
             for f in pathlib.Path(".").glob("**/" + extpath.name):
@@ -79,6 +89,7 @@ st.setup(
     version="0.2",
 	author="Alexander Knieps",
     ext_modules=[st.Extension("tinygeo", sources = tinygeo_sources)],
+    install_requires = ['numpy'],
     cmdclass={
         "build_ext": cmake_build_ext,
     },

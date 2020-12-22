@@ -1,8 +1,14 @@
 function(add_capnp_cpp target name)
 	set(INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/capnp_${target}_includes)
 	set(CAPNP_TARGET capnp_${target}_compilation)
-	
-	get_target_property(CAPNP_INCLUDE_DIRECTORY CapnProto::capnp_tool CAPNP_INCLUDE_DIRECTORY)
+
+	if(NOT CAPNP_INCLUDE_DIRECTORY)	
+		get_target_property(CAPNP_INCLUDE_DIRECTORY CapnProto::capnp_tool CAPNP_INCLUDE_DIRECTORY)
+	endif()
+
+	if(NOT CAPNP_INCLUDE_DIRECTORY)
+		get_target_property(CAPNP_INCLUDE_DIRECTORY CapnProto::capnp INTERFACE_INCLUDE_DIRECTORIES)
+	endif()
 	
 	add_custom_command(
 		COMMAND $<TARGET_FILE:CapnProto::capnp_tool> compile -o$<TARGET_FILE:CapnProto::capnpc_cpp> --src-prefix ${CMAKE_CURRENT_SOURCE_DIR} -I${CAPNP_INCLUDE_DIRECTORY} ${CMAKE_CURRENT_SOURCE_DIR}/${name}
@@ -29,5 +35,5 @@ pybind11_add_module(tinygeo python.cpp)
 target_link_libraries(tinygeo PRIVATE headers Eigen3::Eigen tinygeo_capnp)
 #target_link_libraries(tinygeo PRIVATE headers Eigen3::Eigen)
 
-install(TARGETS tinygeo EXPORT tinygeo_exports LIBRARY DESTINATION lib)
+install(TARGETS tinygeo EXPORT tinygeo_exports LIBRARY DESTINATION lib/python${Python_VERSION_MAJOR}.${Python_VERSION_MINOR}/site-packages)
 install(TARGETS tinygeo_capnp EXPORT tinygeo_exports)

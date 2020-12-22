@@ -4,6 +4,8 @@ include(ExternalProject)
 
 project(tinygeo)
 
+set(CMAKE_POSITION_INDEPENDENT_CODE On)
+
 # =================================== DEPENDENCY SETUP ======================================
 
 set(TINYGEO_ALLOW_BUNDLED ON CACHE BOOL "Whether bundled libraries are allowed (overrides individual settings)")
@@ -63,6 +65,8 @@ endfunction()
 
 setup_dependency(Eigen3 Eigen)
 
+find_package(Python REQUIRED)
+
 # ================================ MAIN CODE ===============================================
 
 add_library(headers INTERFACE)
@@ -81,7 +85,9 @@ message(STATUS "")
 message(STATUS " --- Installation information ---")
 message(STATUS "")
 message(STATUS "Libraries:")
+message(STATUS "  INC: ${CAPNP_INCLUDE_DIRS}")
 message(STATUS "  CapnProto: ${CapnProto_MSG}")
 message(STATUS "  pybind11:  ${pybind11_MSG}")
 message(STATUS "  Eigen:     ${Eigen3_MSG}")
+message(STATUS "  Python:    ${Python_VERSION}")
 message(STATUS "")

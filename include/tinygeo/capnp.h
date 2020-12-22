@@ -9,7 +9,13 @@
 #include <capnp/serialize.h>
 
 // POSIX-style file-handling
+#if _WIN32
 #include <kj/miniposix.h>
+#else
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#endif
 
 // Auto-generated Cap'n'proto header
 #include <tinygeo.capnp.h>
@@ -67,7 +73,7 @@ template<typename P>
 struct CapnpNodeData {
 	capnp::GeoNode::Reader backend;
 	
-	CapnpNodeData(capnp::GeoNode::Reader& backend) :
+	CapnpNodeData(const capnp::GeoNode::Reader& backend) :
 		backend(backend)
 	{}
 	
@@ -155,7 +161,7 @@ struct CapnpTriangleMesh :
 		#if _WIN32 && !__MINGW32__
 		const int fd = _open(filename.c_str(), _O_BINARY | _O_RDONLY);
 		#else
-		const int fd = open(filename.c_str(), O_BINARY | O_RDONLY);
+		const int fd = open(filename.c_str(), O_RDONLY);
 		#endif
 		
 		::capnp::ReaderOptions options;
@@ -182,7 +188,7 @@ struct CapnpTriangleMesh :
 namespace capnp {
 
 template<typename B, typename O>
-void save_buffer(const B& buf, O& out) {
+void save_buffer(const B& buf, O out) {
 	for(size_t i = 0; i < buf.shape(0); ++i) {
 		for(size_t j = 0; j < buf.shape(1); ++j) {
 			size_t li = i * buf.shape(1) + j;
@@ -232,7 +238,7 @@ void save_grid_data(const G& data, GeoGrid::Builder target) {
 }
 
 template<size_t dim, typename PointBuffer, typename IndexBuffer, typename TagBuffer, typename NodeData, typename GridData>
-void save_mesh(IndexedTriangleMesh<dim, PointBuffer, IndexBuffer, TagBuffer, NodeData, GridData>& mesh, capnp::GeoTree::Builder& out) {
+void save_mesh(IndexedTriangleMesh<dim, PointBuffer, IndexBuffer, TagBuffer, NodeData, GridData>& mesh, capnp::GeoTree::Builder out) {
 	out.setDimension(dim);
 	out.setNumTags(mesh.tag_buffer.shape(1));
 	
@@ -249,7 +255,7 @@ void save_mesh(IndexedTriangleMesh<dim, PointBuffer, IndexBuffer, TagBuffer, Nod
 }
 
 template<size_t dim, typename PointBuffer, typename IndexBuffer, typename TagBuffer, typename NodeData, typename GridData>
-void save_mesh(IndexedTriangleMesh<dim, PointBuffer, IndexBuffer, TagBuffer, NodeData, GridData>& mesh, capnp::GeoFile::Builder& out) {
+void save_mesh(IndexedTriangleMesh<dim, PointBuffer, IndexBuffer, TagBuffer, NodeData, GridData>& mesh, capnp::GeoFile::Builder out) {
 	out.setHeader("This file was saved by the tinygeo library. See https://github.com/alexrobomind/tinygeo for the source code and the CapnProto schema for this file.");
 	out.setVersion(0);
 	

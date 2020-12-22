@@ -315,7 +315,7 @@ struct IndexedTriangleMesh : public TriangleMesh<dim, PointBuffer, IndexBuffer, 
 					new_buffer(counter + i, j) = this -> index_buffer(in.data[i].index, j);
 				}
 				
-				for(size_t j = 0; j < tag_buffer.shape(1); ++j) {
+				for(size_t j = 0; j < this -> tag_buffer.shape(1); ++j) {
 					new_tag_buffer(counter + i, j) = this -> tag_buffer(in.data[i].index, j);
 				}
 			}
