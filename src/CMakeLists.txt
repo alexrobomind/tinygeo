@@ -35,5 +35,5 @@ pybind11_add_module(tinygeo python.cpp)
 target_link_libraries(tinygeo PRIVATE headers Eigen3::Eigen tinygeo_capnp)
 #target_link_libraries(tinygeo PRIVATE headers Eigen3::Eigen)
 
-install(TARGETS tinygeo EXPORT tinygeo_exports LIBRARY DESTINATION lib/python${Python_VERSION_MAJOR}.${Python_VERSION_MINOR}/site-packages)
-install(TARGETS tinygeo_capnp EXPORT tinygeo_exports)
+install(TARGETS tinygeo EXPORT tinygeoConfig LIBRARY DESTINATION lib/python${Python_VERSION_MAJOR}.${Python_VERSION_MINOR}/site-packages)
+install(TARGETS tinygeo_capnp EXPORT tinygeoConfig)

@@ -24,9 +24,10 @@ struct Point {
 			x[i] = input[i];
 	}
 	
-	Point(const std::initializer_list<T>& input) :
-		Point(std::array<T, dim>(input))
-	{}
+	Point(const std::initializer_list<T>& input) {
+		for(size_t i = 0; i < dim; ++i)
+			x[i] = *(input.begin() + i);
+	}
 	
 	Point(const std::valarray<T>& input) {
 		for(size_t i = 0; i < dim; ++i)

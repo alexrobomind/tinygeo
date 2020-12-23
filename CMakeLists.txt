@@ -72,12 +72,12 @@ find_package(Python REQUIRED)
 add_library(headers INTERFACE)
 target_include_directories(headers INTERFACE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include> $<INSTALL_INTERFACE:${CMAKE_INSTALL_PREFIX}/include>)
 
-install(TARGETS headers EXPORT tinygeo_exports)
+install(TARGETS headers EXPORT tinygeoConfig)
 install(DIRECTORY include/tinygeo DESTINATION include)
 
 add_subdirectory(src)
 
-install(EXPORT tinygeo_exports DESTINATION lib/cmake NAMESPACE "tinygeo::")
+install(EXPORT tinygeoConfig DESTINATION lib/tinygeo/cmake NAMESPACE "tinygeo::")
 
 # =============================== SETUP INFO ===============================================
 
