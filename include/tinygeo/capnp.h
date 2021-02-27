@@ -166,10 +166,7 @@ struct CapnpTriangleMesh :
 		
 		::capnp::ReaderOptions options;
 		options.traversalLimitInWords = ((uint64_t) 1) << 60;//8 * 1024 * 1024 * 1024;
-		
-		std::cout << "Traversal limit" << std::endl;
-		std::cout << options.traversalLimitInWords << std::endl;
-		
+				
 		::capnp::StreamFdMessageReader* message = new ::capnp::StreamFdMessageReader(fd, options);
 		
 		auto deleter = [=](MeshType* in) {
